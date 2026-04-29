@@ -207,7 +207,7 @@ namespace FoodCheck
         /// </summary>
         /// <param name="territoryType">The territory to check against.</param>
         /// <returns>True if high-end, false otherwise.</returns>
-        public static bool TerritoryIsHighEndDuty(ushort territoryType)
+        public static bool TerritoryIsHighEndDuty(uint territoryType)
         {
             string name = Plugin.Data.Excel
                 .GetSheet<TerritoryType>()!
