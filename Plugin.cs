@@ -37,6 +37,7 @@ namespace FoodCheck
 
         public static bool FirstRun = true;
         public static bool Debug = false;
+        public static uint FedStatus = 48;
 
         private delegate nint CountdownTimerHookDelegate(ulong a1);
 
@@ -151,53 +152,37 @@ namespace FoodCheck
 
         public static unsafe void CheckWhoNeedsToEat()
         {
-            string PlayersWhoNeedToEat = "";
+            string playersWhoNeedToEat = "";
             foreach (var partyMember in PartyList)
             {
                 if (partyMember == null) { continue; }
-                //Check for food
-                if (partyMember.Statuses.FirstOrDefault(status => status.GameData.Value.Name == "Well Fed") == null)
-                {
-                    //if (first)
-                    //{
-                    //this.chat.Print($"FOOD CHECK!");
-                    //    first = false;
-                    //}
-                    if (Plugin.PluginConfig.OnlyUseFirstNames)
-                    {
-                        PlayersWhoNeedToEat += partyMember.Name.TextValue.Split(' ')[0] + ", ";
-                    }
-                    else
-                    {
-                        PlayersWhoNeedToEat += partyMember.Name.TextValue + ", ";
-                    }
-                    //this.chat.Print($"{partyMember.Name}");
-                }
-                else
-                {
-                    var statusManager = ((Character*)partyMember.GameObject.Address)->GetStatusManager();
-                    var statusIndex = statusManager->GetStatusIndex(48);
-                    var RemainingTime = statusManager->GetRemainingTime(statusIndex) / 60;
-
-                    //Chat.Print(partyMember.Name.TextValue + " has " + RemainingTime + " minutes left on their food buff.");
-                    if (PluginConfig.CheckForFoodUnderXMinutes && RemainingTime < PluginConfig.MinutesToCheck)
-                    {
-                        if (Plugin.PluginConfig.OnlyUseFirstNames)
-                        {
-                            PlayersWhoNeedToEat += partyMember.Name.TextValue.Split(' ')[0] + ", ";
-                        }
-                        else
-                        {
-                            PlayersWhoNeedToEat += partyMember.Name.TextValue + ", ";
-                        }
-                    }
-                }
+                
+                // Get the full status manager for this party member to check all status effects
+                var statusManager = ((Character*)partyMember.GameObject.Address)->GetStatusManager();
+                int statusIndex = statusManager->GetStatusIndex(FedStatus);
+                
+                // Player needs food if buff is missing or below the time threshold
+                bool needsFood = statusIndex == -1
+                    || (PluginConfig.CheckForFoodUnderXMinutes && statusManager->GetRemainingTime(statusIndex) / 60 < PluginConfig.MinutesToCheck);
+                if (!needsFood) { continue; }
+                
+                //if (first)
+                //{
+                //this.chat.Print($"FOOD CHECK!");
+                //    first = false;
+                //}
+                
+                //this.chat.Print($"{partyMember.Name}");
+                
+                string name = PluginConfig.OnlyUseFirstNames
+                    ? partyMember.Name.TextValue.Split(' ')[0]
+                    : partyMember.Name.TextValue;
+                playersWhoNeedToEat += name + ", ";
             }
-            if (PlayersWhoNeedToEat != "" && PlayersWhoNeedToEat.Length > 3)
-            {
-                string FinalMessage = PluginConfig.CustomizableMessage.Replace("<names>", PlayersWhoNeedToEat.Remove(PlayersWhoNeedToEat.Length - 2, 2));
-                Chat.Print(Functions.BuildSeString("FoodCheck", FinalMessage));
-            }
+            
+            if (playersWhoNeedToEat.Length <= 3) return;
+            string finalMessage = PluginConfig.CustomizableMessage.Replace("<names>", playersWhoNeedToEat.Remove(playersWhoNeedToEat.Length - 2, 2));
+            Chat.Print(Functions.BuildSeString("FoodCheck", finalMessage));
         }
 
         //Taken from the Stanley Parable plugin, https://github.com/rekyuu/StanleyParableXiv/blob/main/StanleyParableXiv/Utility/XivUtility.cs
